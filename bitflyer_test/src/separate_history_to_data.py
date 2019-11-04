@@ -14,7 +14,7 @@ def get_date_start(dt):
         hour=4)
 
 def main():
-    filename = 'descend.pkl'
+    filename = 'data/executions_descend.pkl'
 
     executions = deque()
     cnt = 0
@@ -52,7 +52,7 @@ def main():
         end = end + delta
 
     with open('data/executions/remain.pkl', mode="wb") as f:
-        pickle.dump(executions, f)
+        pickle.dump(reversed(executions), f)
 
 
 if __name__=='__main__':
