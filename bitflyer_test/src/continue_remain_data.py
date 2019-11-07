@@ -13,6 +13,38 @@ def get_date_start(dt):
         year=dt.year, month=dt.month, day=dt.day,
         hour=4)
 
+def separate(executions):
+    start = get_date_start(executions[0].exec_date)
+    delta = datetime.timedelta(days=1)
+    end = start + delta
+
+    while end < datetime.datetime.now():
+        print(end)
+        tmp_queue = deque()
+        while len(executions) > 0:
+            e = executions.popleft()
+            if e.exec_date < end:
+                tmp_queue.append(e)
+            else:
+                executions.appendleft(e)
+                break
+
+        if len(executions) > 0:
+            with open('data/executions/{:04d}{:02d}{:02d}.pkl'.format(
+                    start.year, start.month, start.day), mode="wb") as f:
+                pickle.dump(tmp_queue, f)
+        else:
+            # executions = tmp_queue.extend(executions)
+            tmp_queue.extend(executions)
+            executions = tmp_queue
+            break
+
+        start = end
+        end = end + delta
+
+    return executions
+
+
 def main():
     ########
     # Load
@@ -64,6 +96,8 @@ def main():
 
     print(len(executions))
     print(executions[-1].exec_date)
+
+    executions = separate(executions)
     with open('data/executions/remain.pkl', mode="wb") as f:
         pickle.dump(executions, f)
 
@@ -79,39 +113,13 @@ def main():
             e = Execution(r)
             executions.append(e)
 
+        executions = separate(executions)
         with open('data/executions/remain.pkl', mode="wb") as f:
             pickle.dump(executions, f)
 
+        last_id = executions[-1].id
+
         print(executions[-1].exec_date)
-
-
-
-
-    ########
-    # Separate
-    ########
-    start = get_date_start(executions[0].exec_date)
-    delta = datetime.timedelta(days=1)
-    end = start + delta
-
-    print(start)
-    # while end < datetime.datetime.now():
-    #     print(end)
-    #     tmp_queue = deque()
-    #     while len(executions) > 0:
-    #         e = executions.pop()
-    #         if e.exec_date < end:
-    #             tmp_queue.append(e)
-    #         else:
-    #             executions.append(e)
-    #             break
-
-    #     with open('data/executions/{:04d}{:02d}{:02d}.pkl'.format(
-    #             start.year, start.month, start.day), mode="wb") as f:
-    #         pickle.dump(tmp_queue, f)
-
-    #     start = end
-    #     end = end + delta
 
 
 

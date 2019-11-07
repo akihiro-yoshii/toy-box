@@ -44,6 +44,11 @@ def main():
                 executions.append(e)
                 break
 
+        if len(executions) == 0:
+            executions = tmp_queue
+            executions.reverse()
+            break
+
         with open('data/executions/{:04d}{:02d}{:02d}.pkl'.format(
                 start.year, start.month, start.day), mode="wb") as f:
             pickle.dump(tmp_queue, f)
