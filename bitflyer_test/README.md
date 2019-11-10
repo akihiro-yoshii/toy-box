@@ -7,7 +7,7 @@ $ conda create -n bitflyer python=3.7
 
 必要なパッケージ
 ```
-$ conda install pybitflyer
+$ conda install pybitflyer matplotlib
 ```
 
 ## 実行方法
@@ -29,3 +29,14 @@ https://www.moneypartners.co.jp/support/tech/sma.html
 
 ロウソク足チャート
 https://qiita.com/toyolab/items/1b5d11b5d376bd542022
+
+
+## 気をつけること
+BTCは小数点以下の値を持つが，0.00000001BTCが最小単位のため，妙にfloatで扱うと少数以下の空間で誤差が生じる．
+
+## TODO
+- BTC取り扱い単位のsatoshi化
+- データ抜けチェック
+- データのソート箇所の設計
+- 定常動作時用の動作を設計
+- データ取り扱いのpandas化

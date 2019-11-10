@@ -2,22 +2,17 @@ from collections import deque
 import pickle
 import datetime
 
-from bitflyer import Execution
+import timer_functions
+
+from analyze import *
+
+import csv
 
 
 def open_executions(path):
     with open(path, mode="rb") as f:
         executions = pickle.load(f)
     return executions
-
-
-def get_minute(dt):
-    return datetime.datetime(
-        year=dt.year,
-        month=dt.month,
-        day=dt.day,
-        hour=dt.hour,
-        minute=dt.minute)
 
 
 def pickup_term(executions, start, end):
@@ -37,30 +32,60 @@ def summary_executions(executions):
     close = executions[-1].price
     low = min(executions, key=lambda e: e.price).price
     high = max(executions, key=lambda e: e.price).price
-    total_size = 0.0
+    volume = 0.0
     for e in executions:
-        total_size += e.size
+        volume += e.size
 
-    return open_price, close, low, high, total_size
+    return open_price, close, low, high, volume
 
 
 def main():
     # Open pkl
     executions = deque()
-    files = ['data/executions/20191003.pkl', 'data/executions/20191004.pkl']
+    files = ['data/executions/remain.pkl']
     for f in files:
         executions.extend(open_executions(f))
 
-    # pickup from list
-    ## 何もない期間どうするか？
-    start = get_minute(executions[0].exec_date)
-    end = start + datetime.timedelta(minutes=1)
-    target = pickup_term(executions, start, end)
+    # Sort executions
+    executions = list(executions)
+    executions.sort(key=lambda e: e.exec_date)
+    executions = deque(executions)
 
-    # Get low/high/open/close/volume
-    print(summary_executions(target))
+    # Loop
+    span = 1  # minutes
+    start = timer_functions.mask_time(executions[0].exec_date, mask="seconds")
+    end = start + datetime.timedelta(minutes=span)
+
+    # pickup from list
+    tds = []
+    while end < timer_functions.mask_time(executions[-1].exec_date) + datetime.timedelta(minutes=1):
+        target = pickup_term(executions, start, end)
+
+        if len(target) > 0:
+            # Get open/close/low/high/volume
+            open_price, close, low, high, volume = summary_executions(target)
+        else:
+            open_price = close
+            low = close
+            high = close
+            volume = 0.0
+
+        td = TimeData(open=open_price, close=close, low=low, high=high,
+                      start=start, end=end, volume=volume)
+        print(td)
+
+        tds.append(td)
+
+        start = end
+        end = start + datetime.timedelta(minutes=span)
 
     # Save Info
+    with open('test.csv', 'w') as f:
+        writer = csv.writer(f)
+        for td in tds:
+            writer.writerow([td.start, td.open, td.close, td.high, td.low, td.volume])
+
+
 
 if __name__=='__main__':
     main()
