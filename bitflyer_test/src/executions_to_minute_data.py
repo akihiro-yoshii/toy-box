@@ -4,9 +4,10 @@ import datetime
 
 import timer_functions
 
-from analyze import *
+from analyze import TimeData
 
 import csv
+import glob
 
 
 def open_executions(path):
@@ -15,14 +16,20 @@ def open_executions(path):
     return executions
 
 
-def pickup_term(executions, start, end):
+# def pickup_term(executions, start, end):
+def pickup_term(executions, end):
     target = deque()
-    for e in executions:
-        tmp_dt = e.exec_date
-        if start < tmp_dt < end:
-            target.append(e)
+    # for e in executions:
+    #     tmp_dt = e.exec_date
+    #     if start < tmp_dt < end:
+    #         target.append(e)
+    #     else:
+    #         continue
+    while len(executions) > 0:
+        if executions[0].exec_date < end:
+            target.append(executions.popleft())
         else:
-            continue
+            break
 
     return target
 
@@ -42,7 +49,7 @@ def summary_executions(executions):
 def main():
     # Open pkl
     executions = deque()
-    files = ['data/executions/remain.pkl']
+    files = glob.glob('data/executions/*')
     for f in files:
         executions.extend(open_executions(f))
 
@@ -52,14 +59,16 @@ def main():
     executions = deque(executions)
 
     # Loop
-    span = 1  # minutes
+    span = 60  # minutes
     start = timer_functions.mask_time(executions[0].exec_date, mask="seconds")
     end = start + datetime.timedelta(minutes=span)
 
     # pickup from list
     tds = []
-    while end < timer_functions.mask_time(executions[-1].exec_date) + datetime.timedelta(minutes=1):
-        target = pickup_term(executions, start, end)
+    while end < timer_functions.mask_time(
+            executions[-1].exec_date) + datetime.timedelta(minutes=1):
+        # target = pickup_term(executions, start, end)
+        target = pickup_term(executions, end)
 
         if len(target) > 0:
             # Get open/close/low/high/volume
@@ -83,9 +92,9 @@ def main():
     with open('test.csv', 'w') as f:
         writer = csv.writer(f)
         for td in tds:
-            writer.writerow([td.start, td.open, td.close, td.high, td.low, td.volume])
+            writer.writerow([td.start, td.open, td.close,
+                             td.high, td.low, td.volume])
 
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

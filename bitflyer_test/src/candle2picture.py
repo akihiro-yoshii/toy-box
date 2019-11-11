@@ -1,58 +1,46 @@
-import csv
-import datetime
-
-from analyze import *
-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import pandas as pd
 import mpl_finance as mpf
 
+import matplotlib
 import matplotlib.dates as mdates
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt  # NOQA
 
 
 def main():
     # read
-    quotes = []
-    starts = []
-    closes = []
-    with open('test.csv') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            tmp = []
-            tmp.append(mdates.date2num(datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')))
-            tmp.extend([float(v) for v in row[1:-1]])
-            quotes.append(tmp)
-            starts.append(tmp[0])
-            closes.append(float(tmp[2]))
+    column_names = ('time', 'open', 'close', 'high', 'low')
+    df = pd.read_csv('test.csv', names=column_names, index_col=0,
+                     parse_dates=True)
 
+    # rolling_average
+    df['roll_5'] = df['close'].rolling(5).mean()
+    df['roll_25'] = df['close'].rolling(25).mean()
+    df['roll_75'] = df['close'].rolling(75).mean()
 
-    # calc move avarage
-    move_5 = moving_average(closes, move=5)
-    move_15 = moving_average(closes, move=15)
-    move_60 = moving_average(closes, move=60)
-    move_240 = moving_average(closes, move=240)
+    df_ = df.copy()
+    df_.index = mdates.date2num(df_.index)
+    ohlc = df_.tail(100).reset_index().values
 
     # Plot Figure
     fig = plt.figure()
     ax = plt.subplot()
 
-    mpf.candlestick_ochl(ax, quotes, width=0.001, colorup='g', colordown='r', alpha=0.75)
+    mpf.candlestick_ochl(ax, ohlc, colorup='g', colordown='r',
+                         width=0.03, alpha=0.75)
 
-    ax.plot(starts, move_5)
-    ax.plot(starts, move_15)
-    ax.plot(starts, move_60)
-    ax.plot(starts, move_240)
+    ax.plot(ohlc[:, 0], ohlc[:, 6])
+    ax.plot(ohlc[:, 0], ohlc[:, 7])
+    ax.plot(ohlc[:, 0], ohlc[:, 8])
 
-    ax.grid() #グリッド表示
+    ax.grid()
 
     locator = mdates.AutoDateLocator()
     ax.xaxis.set_major_locator(locator)
     ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(locator))
-    fig.autofmt_xdate() #x軸のオートフォーマット
+    fig.autofmt_xdate()  # format x pole
 
     fig.savefig("test.png")
-
 
 
 if __name__ == '__main__':

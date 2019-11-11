@@ -7,7 +7,7 @@ $ conda create -n bitflyer python=3.7
 
 必要なパッケージ
 ```
-$ conda install pybitflyer matplotlib
+$ conda install pybitflyer matplotlib pandas mpl_finance
 ```
 
 ## 実行方法
