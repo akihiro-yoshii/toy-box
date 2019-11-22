@@ -38,30 +38,35 @@ def main():
         df = df.tail(args.output_length)
 
     # Plot Figure
-    fig = plt.figure(figsize=(16.0, 9.0))
-    ax = plt.subplot()
+    # fig = plt.figure(figsize=(16.0, 9.0))
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(16, 9), sharex=True,
+                             gridspec_kw={'height_ratios': [4, 1]})
+    # ax = plt.subplot()
 
     # Plot candle
+    width = (df.index[1] - df.index[0]) * 0.7
     if args.plot_candle:
         ohlc = df.reset_index().values
         width = (ohlc[1][0] - ohlc[0][0]) * 0.7
-        mpf.candlestick_ochl(ax, ohlc, colorup='g', colordown='r',
+        mpf.candlestick_ochl(axes[0], ohlc, colorup='g', colordown='r',
                              width=width, alpha=0.75)
     else:
-        ax.plot(df.index, df.close, color="black", linewidth=0.7)
+        axes[0].plot(df.index, df.close, color="black", linewidth=0.7)
 
     # Plot rolling means
     for span in args.roll_spans:
         name = "roll_{}".format(span)
-        ax.plot(df.index, getattr(df, name), linewidth=0.7, label=name)
+        axes[0].plot(df.index, getattr(df, name), linewidth=0.7, label=name)
 
-    ax.grid(linestyle=':')
-    ax.legend()
+    axes[1].bar(df.index, df.volume, width=width)
+
+    axes[0].grid(linestyle=':')
+    axes[0].legend()
+    axes[1].grid(linestyle=':')
 
     locator = mdates.AutoDateLocator()
-    ax.xaxis.set_major_locator(locator)
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%y/%m/%d %H:%M'))
-    # fig.autofmt_xdate()  # format x pole
+    axes[0].xaxis.set_major_locator(locator)
+    axes[0].xaxis.set_major_formatter(mdates.DateFormatter('%y/%m/%d %H:%M'))
 
     fig.savefig(args.output)
 

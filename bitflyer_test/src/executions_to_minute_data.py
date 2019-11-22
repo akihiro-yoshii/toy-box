@@ -39,7 +39,7 @@ def summary_executions(executions):
     close = executions[-1].price
     high = max(executions, key=lambda e: e.price).price
     low = min(executions, key=lambda e: e.price).price
-    volume = 0.0
+    volume = 0
     for e in executions:
         volume += e.size
 
@@ -87,7 +87,7 @@ def main():
             open, close, high, low, volume = summary_executions(target)
         else:
             open = high = low = close
-            volume = 0.0
+            volume = 0
 
         starts.append(start)
         opens.append(open)
