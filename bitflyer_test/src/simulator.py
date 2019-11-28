@@ -1,6 +1,7 @@
 import argparse
 import pandas as pd
 import datetime
+from collections import deque
 
 
 def parse_args():
@@ -12,11 +13,40 @@ def parse_args():
 
 class Exchange(object):
     def __init__(self):
-        self.orders = []
+        self.orders = deque()
 
     def add_order(self, order, wallet):
         # TODO: 財布からお金を引き出しておく
         self.orders.append(order)
+
+    def judge_orders(self, current):
+        remain = deque()
+        executed = deque()
+
+        now = current[0].to_pydatetime()
+
+        while len(self.orders) > 0:
+            order = self.orders.popleft()
+
+            if now >= order.begin:
+                if judge_order(current, order):
+                    executed.append(order)
+                else:
+                    remain.append(order)
+            else:
+                remain.append(order)
+
+        self.orders = remain
+
+        return executed
+
+    def __repr__(self):
+        s = "[Order]\n"
+        s += "side: {}\n".format(self.side)
+        s += "price: {}\n".format(self.price)
+        s += "size: {}\n".format(self.size)
+        s += "begin: {}\n".format(self.begin)
+        return s
 
 
 class Wallet(object):
@@ -52,7 +82,7 @@ class Order(object):
         s = "[Order]\n"
         s += "side: {}\n".format(self.side)
         s += "price: {}\n".format(self.price)
-        s += "size: {}\n".format(self.size)
+        s += "size: {}\n".format(self.size / (10**8))
         s += "begin: {}\n".format(self.begin)
         return s
 
@@ -74,26 +104,31 @@ def main():
     # Read candle data
     df = pd.read_csv(args.input, index_col=0, parse_dates=True)
 
-    order = Order("BUY", 800000, int(0.01 * (10**8)), datetime.datetime(2019, 11, 16, 12, 30, 0))
-    # print(test_order)
-    flag = True
-    # Loop
-    for row in df.itertuples():
-        now = row[0].to_pydatetime()
+    exchange = Exchange()
 
+    # Test Order
+    order = Order("BUY", 800000, int(0.01 * (10**8)), datetime.datetime(2019, 11, 16, 12, 30, 0))
+    exchange.add_order(order, None)
+    exchange.add_order(order, None)
+    # print(test_order)
+    # Loop
+
+
+    for row in df.itertuples():
         # Dicide order or not
 
         # Simulate orders
-        result = False
-        if order is not None:
-            if now >= order.begin:
-                result = judge_order(row, order)
+        ret = exchange.judge_orders(row)
 
         # Apply result
-        if result:
+        if len(ret) > 0:
             print(row)
+        for order in ret:
+            # order = ret[0]
+            print(order)
             wallet.gain("JPY", order.price * order.size // (10**8))
             order = None
+
     print(wallet)
 
 
