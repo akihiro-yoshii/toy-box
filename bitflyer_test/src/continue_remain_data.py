@@ -1,3 +1,4 @@
+import argparse
 import pybitflyer
 from collections import deque
 import pickle
@@ -7,6 +8,13 @@ import datetime
 
 from bitflyer import Execution
 import my_key as key
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("store_data", type=str, help="path of store data")
+
+    return parser.parse_args()
+
 
 def get_date_start(dt):
     return datetime.datetime(
@@ -49,7 +57,10 @@ def main():
     ########
     # Load
     ########
-    filename = 'data/executions/remain.pkl'
+    args = parse_args()
+
+    filename = args.store_data
+    #'data/executions/remain.pkl'
 
     executions = deque()
     with open(filename, mode="rb") as f:
@@ -98,7 +109,7 @@ def main():
     print(executions[-1].exec_date)
 
     executions = separate(executions)
-    with open('data/executions/remain.pkl', mode="wb") as f:
+    with open(args.store_data, mode="wb") as f:
         pickle.dump(executions, f)
 
 
@@ -114,7 +125,7 @@ def main():
             executions.append(e)
 
         executions = separate(executions)
-        with open('data/executions/remain.pkl', mode="wb") as f:
+        with open(args.store_data, mode="wb") as f:
             pickle.dump(executions, f)
 
         last_id = executions[-1].id
