@@ -1,7 +1,7 @@
-DATA_LENGTH=360
+DATA_LENGTH=720
 SPAN_MINUTE=1
-CANDLE=--plot_candle
-# CANDLE=
+CANDLE=
+# CANDLE=--plot_candle
 
 .PHONY: all
 all: test.png

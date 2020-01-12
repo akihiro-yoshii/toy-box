@@ -1,5 +1,6 @@
 import datetime
 
+
 def mask_time(target, mask="seconds"):
     ret_dt = None
     if mask == "seconds":

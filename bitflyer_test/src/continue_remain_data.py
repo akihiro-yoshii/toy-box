@@ -3,11 +3,11 @@ import pybitflyer
 from collections import deque
 import pickle
 import time
-import os
 import datetime
 
 from bitflyer import Execution
 import my_key as key
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -20,6 +20,7 @@ def get_date_start(dt):
     return datetime.datetime(
         year=dt.year, month=dt.month, day=dt.day,
         hour=4)
+
 
 def separate(executions):
     start = get_date_start(executions[0].exec_date)
@@ -60,7 +61,7 @@ def main():
     args = parse_args()
 
     filename = args.store_data
-    #'data/executions/remain.pkl'
+    # 'data/executions/remain.pkl'
 
     executions = deque()
     with open(filename, mode="rb") as f:
@@ -80,7 +81,9 @@ def main():
     ########
     last_id = executions[-1].id
 
-    api = pybitflyer.API(api_key=key.bitflyer['key'], api_secret=key.bitflyer['secret'])
+    api = pybitflyer.API(
+        api_key=key.bitflyer['key'],
+        api_secret=key.bitflyer['secret'])
 
     ret = api.executions(after=last_id, count=500)
 
@@ -112,7 +115,6 @@ def main():
     with open(args.store_data, mode="wb") as f:
         pickle.dump(executions, f)
 
-
     ########
     # kanshi
     ########
@@ -133,6 +135,5 @@ def main():
         print(executions[-1].exec_date)
 
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
