@@ -32,7 +32,7 @@ def main():
     results = np.array(results)
 
     # output
-    fig, ax = plt.subplots(figsize=(16, 9))
+    fig, ax = plt.subplots(figsize=(19.2, 10.8))
     ax.scatter(starts, results, s=5)
     locator = mdates.AutoDateLocator()
     ax.xaxis.set_major_locator(locator)

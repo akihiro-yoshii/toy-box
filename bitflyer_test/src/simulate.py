@@ -36,7 +36,6 @@ def judge_orders(wallet, timestamp, low, high):
     rejected = deque()
 
     for order in wallet.orders:
-
         if timestamp >= order.end:
             rejected.append(order)
         elif timestamp >= order.begin:
@@ -141,7 +140,7 @@ class Order(object):
         self.price = price
         self.size = size
         self.begin = begin + datetime.timedelta(minutes=1)
-        self.end = begin + datetime.timedelta(days=7)
+        self.end = begin + datetime.timedelta(days=1)
 
     def __repr__(self):
         s = "[Order]\n"
@@ -152,42 +151,44 @@ class Order(object):
         return s
 
 
+def strategy(row, wallet):
+    now = row[0].to_pydatetime()
+
+    # strategy
+
+    # if row.roll_short < row.roll_mid:
+    #     # price = int(row.close * 0.99)
+    #     price = int(row.close * 1.01)
+    #     if wallet.btc >= (0.01 * (SATOSHI)):
+    #         # print("SELL ORDER")
+    #         order = Order("SELL", price, int(0.01 * SATOSHI), now)
+    #         wallet.add_order(order)
+    if wallet.btc >= (0.01 * (SATOSHI)):
+        price = int(row.close * 1.05)
+        order = Order("SELL", price, int(0.01 * SATOSHI), now)
+        wallet.add_order(order)
+    # elif row.roll_short > row.roll_mid:
+    if row.roll_short > row.roll_mid:
+        # price = int(row.close * 1.01)
+        price = int(row.close * 0.99)
+        if wallet.jpy > int(price * 0.01):
+            # print("BUY ORDER")
+            order = Order("BUY", price, int(0.01 * SATOSHI), now)
+            wallet.add_order(order)
+
+
 def simulate(params):
     df, index = params
     wallet = Wallet(30000, 0.00 * SATOSHI)
 
     exchange = Exchange()
 
-    # df_ = df[index:index+43200]
-    df_ = df[index:]
+    df_ = df[index:index+43200]
+    # df_ = df[index:]
 
     # Loop
     for row in df_.itertuples():
-        now = row[0].to_pydatetime()
-
-        # Dicide order or not
-
-        # # strategy
-        # if row.roll_short < row.roll_mid:
-        #     # price = int(row.close * 0.99)
-        #     price = int(row.close * 1.01)
-        #     if wallet.btc >= (0.01 * (SATOSHI)):
-        #         # print("SELL ORDER")
-        #         order = Order("SELL", price, int(0.01 * SATOSHI), now)
-        #         wallet.add_order(order)
-        if wallet.btc >= (0.01 * (SATOSHI)):
-            price = int(row.close * 1.05)
-            order = Order("SELL", price, int(0.01 * SATOSHI), now)
-            wallet.add_order(order)
-        # # elif row.roll_mid > row.roll_long:
-        # elif row.roll_short > row.roll_mid:
-        if row.roll_short > row.roll_mid:
-            # price = int(row.close * 1.01)
-            price = int(row.close * 0.99)
-            if wallet.jpy > int(price * 0.01):
-                # print("BUY ORDER")
-                order = Order("BUY", price, int(0.01 * SATOSHI), now)
-                wallet.add_order(order)
+        strategy(row, wallet)
 
         # Simulate orders
         accepted, rejected = judge_orders(
@@ -196,11 +197,9 @@ def simulate(params):
         # Apply result
         wallet.cancel_orders(rejected)
         for order in accepted:
-            # print(order.side)
             exchange.exec_order(order, wallet)
 
     # finalize
-    # start = mdates.date2num(pd.to_datetime(df_.index[0]))
     start = pd.to_datetime(df_.index[0])
     result = wallet.result(row.close)
 
@@ -213,7 +212,7 @@ def main():
     # Read candle data
     df = pd.read_csv(args.input, index_col=0, parse_dates=True)
 
-    short, mid, long = 60, 120, 720
+    short, mid, long = 15, 60, 720
 
     df['roll_short'] = df['close'].rolling(short).mean()
     df['roll_mid'] = df['close'].rolling(mid).mean()
@@ -244,8 +243,8 @@ def main():
     results = np.array(results)
 
     print("[Result]")
-    print("Average: {:5.8f}".format(np.mean(results)))
-    print("Standard Deviation: {:4.7f}".format(np.std(results)))
+    print("Average: {:5.2f}".format(np.mean(results)))
+    print("Standard Deviation: {:4.2f}".format(np.std(results)))
 
 
 if __name__ == '__main__':

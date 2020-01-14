@@ -10,6 +10,7 @@ import timer_functions
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("executions", type=str, help="executions' directory")
     parser.add_argument("output", type=str, help="path of candle csv")
 
     parser.add_argument("--span", type=int, default=1,
@@ -51,7 +52,7 @@ def main():
 
     # Open pkl
     executions = deque()
-    files = glob.glob('data/executions/*')
+    files = glob.glob('{}/*'.format(args.executions))
     for f in files:
         executions.extend(open_executions(f))
     print("LOAD EXECUTIONS")
