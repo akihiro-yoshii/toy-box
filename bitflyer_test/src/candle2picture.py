@@ -38,10 +38,8 @@ def main():
         df = df.tail(args.output_length)
 
     # Plot Figure
-    # fig = plt.figure(figsize=(16.0, 9.0))
     fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(16, 9), sharex=True,
                              gridspec_kw={'height_ratios': [4, 1]})
-    # ax = plt.subplot()
 
     # Plot candle
     width = (df.index[1] - df.index[0]) * 0.7
@@ -58,8 +56,10 @@ def main():
         name = "roll_{}".format(span)
         axes[0].plot(df.index, getattr(df, name), linewidth=0.7, label=name)
 
+    # Plot Volumes
     axes[1].bar(df.index, df.volume, width=width)
 
+    # Graph Settings
     axes[0].grid(linestyle=':')
     axes[0].legend()
     axes[1].grid(linestyle=':')
