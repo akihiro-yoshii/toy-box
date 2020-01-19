@@ -9,11 +9,14 @@ from bitflyer import Execution
 import my_key as key
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("store_data", type=str, help="path of store data")
+# Initialize
+parser = argparse.ArgumentParser()
+parser.add_argument("output", type=str, help="output data")
+parser.add_argument("--continue_from", type=str, help="before data")
 
-    return parser.parse_args()
+args = parser.parse_args()
+
+api = pybitflyer.API()
 
 
 def get_date_start(dt):
@@ -28,7 +31,6 @@ def separate(executions):
     end = start + delta
 
     while end < datetime.datetime.now():
-        print(end)
         tmp_queue = deque()
         while len(executions) > 0:
             e = executions.popleft()
@@ -54,72 +56,67 @@ def separate(executions):
     return executions
 
 
-def main():
-    ########
-    # Load
-    ########
-    args = parse_args()
+def load_executions(path):
+    with open(path, mode="rb") as f:
+        executions = pickle.load(f)
+    return executions
 
-    filename = args.store_data
-    # 'data/executions/remain.pkl'
+
+def rollback_executions(last_id):
+    raw_executions = api.executions(after=last_id, count=500)
 
     executions = deque()
-    with open(filename, mode="rb") as f:
-        tmp = pickle.load(f)
-        executions.extend(tmp)
-
-    # last_id = 0
-    # for e in executions:
-    #     print(e.id - last_id)
-    #     last_id = e.id
-
-    print(len(executions))
-    print(executions[-1].exec_date)
-
-    ########
-    # RollBack
-    ########
-    last_id = executions[-1].id
-
-    api = pybitflyer.API(
-        api_key=key.bitflyer['key'],
-        api_secret=key.bitflyer['secret'])
-
-    ret = api.executions(after=last_id, count=500)
-
-    tmp_queue = deque()
     while True:
-        for r in ret:
+        for r in raw_executions:
             e = Execution(r)
             if e.id <= last_id:
                 break
-            tmp_queue.append(e)
+            executions.append(e)
 
-        if len(ret) < 500:
+        if len(raw_executions) < 500:
             break
 
         print("RollBacking...")
-        first_id = tmp_queue[-1].id
+        first_id = executions[-1].id
 
         time.sleep(3)
-        ret = api.executions(after=last_id, before=first_id, count=500)
+        raw_executions = api.executions(after=last_id, before=first_id, count=500)
 
-    print(len(tmp_queue))
-    for e in reversed(tmp_queue):
-        executions.append(e)
+    return executions
 
-    print(len(executions))
-    print(executions[-1].exec_date)
+
+def main():
+    if args.continue_from is None:
+        executions = deque()
+
+        # 1st calling
+        raw_executions = api.executions(count=500)
+        for r in reversed(raw_executions):
+            e = Execution(r)
+            executions.append(e)
+    else:
+        # Load executions
+        executions = load_executions(args.continue_from)
+        print("{} contains {} data.".format(args.continue_from,len(executions)))
+
+        # Rollback data
+        last_id = executions[-1].id
+        tmp_executions = rollback_executions(last_id)
+
+        print("Get {} executions by rollback".format(len(tmp_executions)))
+        for e in reversed(tmp_executions):
+            executions.append(e)
 
     executions = separate(executions)
-    with open(args.store_data, mode="wb") as f:
+    with open(args.output, mode="wb") as f:
         pickle.dump(executions, f)
 
-    ########
-    # kanshi
-    ########
+    ################
+    # Polling data
+    ################
     last_id = executions[-1].id
     while True:
+        print(executions[-1].exec_date)
         time.sleep(60)
         ret = api.executions(after=last_id, count=500)
         for r in reversed(ret):
@@ -127,12 +124,11 @@ def main():
             executions.append(e)
 
         executions = separate(executions)
-        with open(args.store_data, mode="wb") as f:
+        with open(args.output, mode="wb") as f:
             pickle.dump(executions, f)
 
         last_id = executions[-1].id
 
-        print(executions[-1].exec_date)
 
 
 if __name__ == '__main__':
