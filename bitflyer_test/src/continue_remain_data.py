@@ -6,7 +6,6 @@ import time
 import datetime
 
 from bitflyer import Execution
-import my_key as key
 
 
 # Initialize
@@ -80,7 +79,8 @@ def rollback_executions(last_id):
         first_id = executions[-1].id
 
         time.sleep(3)
-        raw_executions = api.executions(after=last_id, before=first_id, count=500)
+        raw_executions = api.executions(
+            after=last_id, before=first_id, count=500)
 
     return executions
 
@@ -97,7 +97,8 @@ def main():
     else:
         # Load executions
         executions = load_executions(args.continue_from)
-        print("{} contains {} data.".format(args.continue_from,len(executions)))
+        print("{} contains {} data.".format(
+            args.continue_from, len(executions)))
 
         # Rollback data
         last_id = executions[-1].id
@@ -128,7 +129,6 @@ def main():
             pickle.dump(executions, f)
 
         last_id = executions[-1].id
-
 
 
 if __name__ == '__main__':
