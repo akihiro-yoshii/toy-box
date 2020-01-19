@@ -4,6 +4,7 @@ from collections import deque
 import pickle
 import time
 import datetime
+import os
 
 from bitflyer import Execution
 
@@ -11,6 +12,7 @@ from bitflyer import Execution
 # Initialize
 parser = argparse.ArgumentParser()
 parser.add_argument("output", type=str, help="output data")
+parser.add_argument("daily_data", type=str, help="Directory of daily data")
 parser.add_argument("--continue_from", type=str, help="before data")
 
 args = parser.parse_args()
@@ -40,11 +42,12 @@ def separate(executions):
                 break
 
         if len(executions) > 0:
-            with open('data/executions/{:04d}{:02d}{:02d}.pkl'.format(
-                    start.year, start.month, start.day), mode="wb") as f:
+            path = os.path.join(args.daily_data,
+                                "{:04d}{:02d}{:02d}.pkl".format(
+                                    start.year, start.month, start.day))
+            with open(path, mode="wb") as f:
                 pickle.dump(tmp_queue, f)
         else:
-            # executions = tmp_queue.extend(executions)
             tmp_queue.extend(executions)
             executions = tmp_queue
             break
