@@ -3,59 +3,22 @@ import pybitflyer
 from collections import deque
 import pickle
 import time
-import datetime
-import os
 
 from bitflyer import Execution
+from get_executions import separate, trace_executions
 
-
-# Initialize
-parser = argparse.ArgumentParser()
-parser.add_argument("output", type=str, help="output data")
-parser.add_argument("daily_data", type=str, help="Directory of daily data")
-parser.add_argument("--continue_from", type=str, help="before data")
-
-args = parser.parse_args()
 
 api = pybitflyer.API()
 
 
-def get_date_start(dt):
-    return datetime.datetime(
-        year=dt.year, month=dt.month, day=dt.day,
-        hour=4)
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output", type=str, help="output data")
+    parser.add_argument("daily_data", type=str, help="Directory of daily data")
+    parser.add_argument("--continue_from", type=str, required=True,
+                        help="before data")
 
-
-def separate(executions):
-    start = get_date_start(executions[0].exec_date)
-    delta = datetime.timedelta(days=1)
-    end = start + delta
-
-    while end < datetime.datetime.now():
-        tmp_queue = deque()
-        while len(executions) > 0:
-            e = executions.popleft()
-            if e.exec_date < end:
-                tmp_queue.append(e)
-            else:
-                executions.appendleft(e)
-                break
-
-        if len(executions) > 0:
-            path = os.path.join(args.daily_data,
-                                "{:04d}{:02d}{:02d}.pkl".format(
-                                    start.year, start.month, start.day))
-            with open(path, mode="wb") as f:
-                pickle.dump(tmp_queue, f)
-        else:
-            tmp_queue.extend(executions)
-            executions = tmp_queue
-            break
-
-        start = end
-        end = end + delta
-
-    return executions
+    return parser.parse_args()
 
 
 def load_executions(path):
@@ -89,29 +52,22 @@ def rollback_executions(last_id):
 
 
 def main():
-    if args.continue_from is None:
-        executions = deque()
+    args = parse_args()
 
-        # 1st calling
-        raw_executions = api.executions(count=500)
-        for r in reversed(raw_executions):
-            e = Execution(r)
-            executions.append(e)
-    else:
-        # Load executions
-        executions = load_executions(args.continue_from)
-        print("{} contains {} data.".format(
-            args.continue_from, len(executions)))
+    # Load executions
+    executions = load_executions(args.continue_from)
+    print("{} contains {} data.".format(
+        args.continue_from, len(executions)))
 
-        # Rollback data
-        last_id = executions[-1].id
-        tmp_executions = rollback_executions(last_id)
+    # get data from last time
+    last_id = executions[-1].id
+    tmp_executions = rollback_executions(last_id)
 
-        print("Get {} executions by rollback".format(len(tmp_executions)))
-        for e in reversed(tmp_executions):
-            executions.append(e)
+    print("Get {} executions by rollback".format(len(tmp_executions)))
+    for e in reversed(tmp_executions):
+        executions.append(e)
 
-    executions = separate(executions)
+    executions = separate(executions, args.daily_data)
     with open(args.output, mode="wb") as f:
         pickle.dump(executions, f)
 
@@ -119,19 +75,7 @@ def main():
     # Polling data
     ################
     last_id = executions[-1].id
-    while True:
-        print(executions[-1].exec_date)
-        time.sleep(60)
-        ret = api.executions(after=last_id, count=500)
-        for r in reversed(ret):
-            e = Execution(r)
-            executions.append(e)
-
-        executions = separate(executions)
-        with open(args.output, mode="wb") as f:
-            pickle.dump(executions, f)
-
-        last_id = executions[-1].id
+    trace_executions(last_id, executions, args.output, args.daily_data)
 
 
 if __name__ == '__main__':
